@@ -1,0 +1,28 @@
+#TouhouDanmakufu[Plural]
+#ScriptVersion[3]
+#Title["rostuhan's Plural Template"]
+#Text["Sample text."]
+#BGM["./music/music.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+@Event{
+
+}
+@Initialize{
+    mainPlural;
+}
+@MainLoop{
+    yield;
+}
+task mainPlural{
+    let dir = GetCurrentScriptDirectory();
+    let boss = ObjEnemyBossScene_Create();
+    // Attacks go here, the second argument is the health partition.
+    ObjEnemyBossScene_Add(boss, 0, dir ~ "attacks/ns1.dnh"); // ns = non-spell.
+    ObjEnemyBossScene_Add(boss, 1, dir ~ "attacks/sc1.dnh"); // sc = spellcard.
+    ObjEnemyBossScene_LoadInThread(boss);
+    ObjEnemyBossScene_Regist(boss);
+    while(!Obj_IsDeleted(boss)){
+        yield;
+    }
+    CloseScript(GetOwnScriptID());
+} 

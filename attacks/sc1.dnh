@@ -1,0 +1,92 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Template attack (spellcard)"]
+#Text["Template spellcard attack."]
+#BGM["./../music/music.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/default_system/Default_ShotConst.txt"
+let objScene = GetEnemyBossSceneObjectID();
+let shotSound = ObjSound_Create();
+ObjSound_Load(shotSound, GetCurrentScriptDirectory() ~ "../sounds/shot.ogg");
+ObjSound_SetVolumeRate(shotSound, 60);
+let objBoss;
+function createBoss() {
+    objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+    ObjEnemy_Regist(objBoss);
+    let bossSprite = GetCurrentScriptDirectory() ~ "../sprites/boss.png";
+    ObjPrim_SetTexture(objBoss, bossSprite);
+    ObjSprite2D_SetSourceRect(objBoss, 0, 0, 50, 50);
+    ObjSprite2D_SetDestCenter(objBoss);
+}
+function hitboxes(objBoss, shotSize, playerSize) {
+    ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), shotSize); 
+    ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), playerSize);
+}
+task protectBoss { // Some I-frames to not let players to defeat the entire boss with a single bomb.
+    ObjEnemy_SetDamageRate(objBoss, 0, 0);
+    wait(60);
+    ObjEnemy_SetDamageRate(objBoss, 100, 100);
+}
+task bossDeath { // Doesn't end the script until the boss is dead.
+    while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0){yield;}
+    if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+            +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+        AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+    }
+    Obj_Delete(objBoss);
+    DeleteShotAll(TYPE_ALL, TYPE_ITEM);
+    SetAutoDeleteObject(true);
+    CloseScript(GetOwnScriptID());
+    return;
+}
+function wait(n){
+    loop(n){yield;}
+}
+function getCenterX() {
+    return GetStgFrameWidth() / 2;
+}
+function getCenterY() {
+    return GetStgFrameHeight() / 2;
+}
+@Event{
+    alternative(GetEventType())
+    case(EV_REQUEST_LIFE){
+        SetScriptResult(2000);
+    }
+    case(EV_REQUEST_TIMER){
+        SetScriptResult(60);
+    }
+    case(EV_REQUEST_SPELL_SCORE){
+        SetScriptResult(1000000);
+    }
+}
+@Initialize{
+    createBoss;
+    bossDeath;
+    attacks;
+    protectBoss;
+    ObjEnemyBossScene_StartSpell(GetEnemyBossSceneObjectID()); // This makes it a spellcard.
+    ObjMove_SetDestAtFrame(objBoss, getCenterX(), 60, 60);
+}
+@MainLoop{
+    hitboxes(objBoss, 50, 50);
+    yield;
+}
+task attacks {
+    wait(60);
+    // Your attacks go here.
+    testAttack;
+}
+task testAttack {
+    let angle = 0;
+    let spin = -10;
+    while (ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { // Please make sure to include this check.
+        ObjSound_Play(shotSound);
+        ascent (i in 0..8) {
+            CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 2, 360 / 8 * i + angle, DS_BALL_S_GREEN, 5);
+        }
+        angle += spin;
+        spin += 0.5;
+        wait(2);
+    }
+}
